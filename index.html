@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snap Studio Photo Collage v2.0</title>
+    <!-- Favicon dari URL -->
+    <link rel="icon" type="image/png" href="https://i.imgur.com/RFJvtpt.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Montserrat:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: sans-serif; margin: 0; padding: 0; width: 100%; height: 100vh;
+            overflow: hidden;
+            background: #0b0e1a;
+			-webkit-user-select: none; -ms-user-select: none; user-select: none;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .bg { position: fixed; inset: 0; z-index: -1; color: white;
+            background-size: 400% 400%; animation: gradientMove 3s ease infinite;  }
+
+        /* BLUR LIGHT BLOBS */
+        .bg::before,
+        .bg::after { content: ""; position: absolute; width: 35vw; height: 45vw; border-radius: 50%; filter: blur(120px); opacity: 0.7; mix-blend-mode: screen; }
+        .bg::before { background: #5ee7df; top: -20%; left: -10%; animation: float1 5s infinite alternate ease-in-out; }
+        .bg::after { background: #b490f5; bottom: -20%; right: -10%; animation: float2 5s infinite alternate ease-in-out; }
+        .blob-center { position: absolute; top: 30%; left: 46%; width: 30vw; height: 40vw; background: #ffd27f; border-radius: 50%; transform: translate(-50%, -50%); filter: blur(140px); opacity: 0.75; mix-blend-mode: screen; animation: floatCenter 5s ease-in-out infinite alternate; }
+
+        /* ANIMATIONS */
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes float1 { from { transform: translate(0,0); } to { transform: translate(100px,80px); } }
+        @keyframes float2 { from { transform: translate(0,0); } to { transform: translate(-120px,-60px); } }
+		@keyframes floatCenter { from { transform: translate(0,0); } to { transform: translate(-80px,-40px); } }
+
+        /* demo content */
+        .content{ color:white; height:100vh; display:flex; align-items:center; justify-content:center; font-size:40px; }
+
+        .app-container {
+            height: 100vh; display: flex; flex-direction: column;
+            padding: 20px; box-sizing: border-box; position: relative; z-index: 1;
+        }
+
+        .header-section { text-align: center; margin-bottom: 24px; flex-shrink: 0; }
+        .main-title { font-family: "Syne", sans-serif !important; font-size: 72px; font-weight: 700; color: white; white-space: nowrap; letter-spacing: -0.02em; pointer-events: none; text-wrap: auto; }
+        .sub-title { font-family: "Syne", sans-serif !important; font-size: 15px; font-weight: 500; text-transform: uppercase; color: rgba(255, 255, 255, 1); letter-spacing: 0.05em;  }
+
+        .editor-workspace { flex: 1; display: grid; grid-template-columns: minmax(520px, 620px) 1fr 320px; gap: 20px; min-height: 0; }
+
+        @media (min-width: 1024px) {
+            .editor-workspace { grid-template-columns: 540px 1fr 320px; } /* Lebar panel kiri ditambah sedikit untuk 5 kolom */
+        }
+
+        .glass-panel { position: relativ; overflow: hidden; border-radius: 32px; background: rgba(255,255,255,0.0); backdrop-filter: blur(28px) saturate(160%); -webkit-backdrop-filter: blur(28px) saturate(160%); border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25); transition: all .4s ease; }
+        .glass-panel::before { content: ""; position: absolute; inset: 0; border-radius: inheri; background: linear-gradient(120deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08) 35%, transparent 60% ); opacity: 0.5; pointer-events: none; }
+        .glass-panel::after { content: ""; position: absolute; inset: -1px; border-radius: inheri; background: radial-gradient(circle at top left, rgba(255,255,255,0.25), transparent 40% ) opacity: 0.4; pointer-events: none; }
+        .glass-panel:hover { transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3); }
+
+        #editor-container {
+            background-color: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            display: flex; align-items: center; justify-content: center; padding-left: 12px; padding-right: 12px;
+            overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 100%; width: 100%; position: relative;
+        }
+
+        .canvas-area {
+            background: transparent; border-radius: 56px;
+            box-shadow: 0 40px 100px -20px rgba(0,0,0,0.5);
+            position: relativ; flex-shrink: 0; transform-origin: center center; 
+            display: none; 
+        }
+
+        .drop-zone { 
+            position: absolute; z-index: 10; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.4); 
+            overflow: hidden; background-color: rgba(255, 255, 255, 0.05); cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .drop-zone.drag-over { background-color: rgba(255, 255, 255, 0.2); border-color: #fff; }
+
+        .uploader-ui { transition: color 0.3s ease; color: white; pointer-events: none; }
+        .drop-zone:not(.has-img):hover { background-color: rgba(255, 255, 255, 0.3); border-color: #fff; }
+
+        .drop-zone.has-img { background-color: #000; border: none; cursor: default; }
+        .drop-zone img { position: absolute; top: 0; left: 0; cursor: grab; user-select: none; transform-origin: 0 0; max-width: none !important; }
+        .drop-zone img:active { cursor: grabbing; }
+        
+        .frame-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 56px; z-index: 20; pointer-events: none; }
+
+        .uploader-text { font-family: "Montserrat", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+        .uploader-title { font-family: "Montserrat", sans-serif; font-size: 36px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; text-align: center; line-height: 1.1; }
+        .uploader-sub { font-family: "Montserrat", sans-serif; font-size: 30px; font-weight: 400; opacity: 1; text-align: center; line-height: 1.1; }
+
+        .drop-zone:hover .uploader-title,
+        .drop-zone:hover .uploader-sub,
+        .drop-zone:hover .icon-upload { color:#111; }
+        .drop-zone:hover { background: white; border-color: white; }
+
+        .zone-controls {
+            position: absolute; top: 15px; right: 15px; display: none; gap: 10px; z-index: 30;
+        }
+        .drop-zone.has-img:hover .zone-controls { display: flex; }
+        .ctrl-btn {
+            width: 48px; height: 48px; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); border-radius: 12px; color: white;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border: 1.5px solid rgba(255, 255, 255, 0.3); transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer;
+        }
+        .ctrl-btn:hover { transform: scale(1.15); background: rgba(0, 0, 0, 0.95); border-color: rgba(255, 255, 255, 0.5); }
+
+        .panel-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.1); overflow: visible; padding: 10px; }
+        .panel-title-text { font-family: "Space Grotesk", sans-serif; font-size: 20px; font-weight: bold; color: white; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; width: 100%; display: block; }
+
+        .tab-btn {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; 
+            padding: 8px 12px; border-radius: 20px; color: rgba(255,255,255,0.5);
+            transition: all 0.3s; }
+        .tab-btn.active { background: #ffffff; color: #000; box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
+
+		#template-scroll { overflow-y: auto; overflow-x: visible; padding-right: 4px; margin-top: 6px; scroll-behavior: smooth; scrollbar-width: none; -ms-overflow-style: none; }
+		#template-scroll::-webkit-scrollbar { display: none; }
+		
+        #template-container {
+			display: grid; margin-top: 24px; overflow: visible; 
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); 
+            align-items: start; gap: 12px; }
+
+        .template-item {
+            position: relative;
+			width: auto; height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+			text-align: center;
+            gap: 6px;
+            padding-bottom: 2px;
+        }
+        .template-thumb {
+            width: fit; height: 100px;
+			position: relative;
+            aspect-ratio: 2/3;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 4px; margin: 0px;
+            border: 2px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            overflow: visible;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+		.template-thumb::after { content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + -5px); transform: translateX(-50%) translateY(0px); background: rgba(0,0,0,.92); color: #fff; font-size: 9px; font-weight: 600; white-space: nowrap; padding: 2px 6px; border-radius: 10px; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s cubic-bezier(.2,.8,.2,1); z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+        /* .template-thumb::before { content: ""; position: absolute; left: 50%; bottom: calc(100% + 1px); transform: translateX(-50%); border: 5px solid transparent; border-top-color: rgba(0,0,0,.92); opacity: 0; transition: .18s ease; } */
+		.template-thumb:not([data-tooltip])::after { display: none; }
+		.template-thumb img { width: 100%; height: 100%; object-fit: contain; z-index: 10; }
+        .template-thumb:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-2px); z-index: 999; }
+		.template-thumb:hover::before { opacity: 1; transform: translateX(-50%) translateY(0); }
+		.template-thumb:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+        
+        .template-thumb.template-active { 
+            border-color: #ffffff; 
+            box-shadow: none;
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .template-name { 
+            position: static; 
+            bottom: -8px; 
+            font-size: 10px;
+			min-height: auto;
+            color: rgba(255, 255, 255, 0.8); 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 0px;
+			text-align: center;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: unset;
+            width: 100%;
+			line-height: 1;
+            pointer-events: none;
+        }
+        .template-thumb.template-active + .template-name {
+            color: #ffffff;
+        }
+
+        .filter-row { display: flex; justify-content: space-between; gap: 1px; margin-bottom: 24px; }
+        .filter-item { display: flex; flex-direction: column; align-items: center; }
+        .filter-btn {
+            width: 44px; height: 44px; border-radius: 50%; 
+            border: 2px solid rgba(255,255,255,0.1); 
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; background-size: cover; background-position: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .filter-btn svg { width: 28px; height: 28px; color: white; }
+        .filter-btn:hover { transform: scale(1.1); border-color: rgba(255, 255, 255, 0.3); }
+        .filter-btn.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.25); box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+
+        .filter-label { font-size: 7px; font-weight: 700; color: rgba(255, 255, 255); text-transform: uppercase; margin-top: 7px; opacity: 1; text-align: center; }
+        
+        .adj-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; position: relative; }
+        .adj-label { width: 70px; font-size: 8px; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        .adj-slider-container { flex: 1; position: relative; display: flex; align-items: center; }
+        
+        .adj-tooltip {
+            position: absolute; top: -26px; left: 50%; transform: translateX(-50%); z-index: 10; white-space: nowrap;
+            font-size: 9px; font-weight: 800; color: #fff; opacity: 0; transition: opacity 0.2s;
+            pointer-events: none; background: #000; padding: 2px 6px; border-radius: 10px;
+        }
+        .adj-slider-container:hover .adj-tooltip { opacity: 1; }
+
+        .reset-mini { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.2); transition: 0.2s; cursor: pointer; }
+        .reset-mini:hover { color: #fff; transform: rotate(-90deg); }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px; }
+        input[type=range]::-webkit-slider-thumb { height: 10px; width: 10px; border-radius: 50%; background: #ffffff; cursor: pointer; -webkit-appearance: none; margin-top: -4px; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+
+        .action-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; color: white; border: 1px solid rgba(255,255,255,0.25); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); cursor: pointer; overflow: hidden; transition: all .35s cubic-bezier(.2,.8,.2,1); }
+        .action-btn::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(135deg, rgba(255,255,255,.35), rgba(255,255,255,.05) ); pointer-events: none; }
+        .action-btn::after { content: ""; position: absolute; top: -150%; left: -40%; width: 60%; height: 300%; background: linear-gradient(120deg, transparent, rgba(255,255,255,.8), transparent ); transform: rotate(25deg); transition: .6s; opacity: 0; }
+        .action-btn:hover::after { left: 120%; opacity: 1; }
+        .btn-print { font-family: "Space Grotesk", sans-serif; font-size: 12px; background: linear-gradient(135deg, #7dd3fc, #3b82f6 ); box-shadow: 0 0 25px rgba(59,130,246,.35), inset 0 1px 0 rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: 2px }
+        .btn-print:hover { transform: translateY(-3px); box-shadow: 0 10px 35px rgba(59,130,246,.6); }
+        .btn-export { font-family: "Space Grotesk", sans-serif; font-size: 12px; background: linear-gradient(135deg, #c084fc, #f472b6 ); box-shadow: 0 0 25px rgba(236,72,153,.35), inset 0 1px 0 rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: 2px }
+        .btn-export:hover { transform: translateY(-3px); box-shadow: 0 10px 35px rgba(236,72,153,.6); }
+        .action-btn:active { transform: scale(.94); }
+
+        @property --rotation { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+        #export-modal { 
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(15px); z-index: 1000; 
+            justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;
+        }
+        #export-modal.active { opacity: 1; display: flex; }
+        .export-bar { position: absolute; width: 520px; height: 64px; border-radius: 100px; background: #0b0f18; display: flex; align-items: center; padding-left: 24px; }
+        .export-bar::before { content: ""; position: absolute; inset: -4px; border-radius: inherit; background: conic-gradient(#488cfb, #29dbbc, #ddf505, #ff9f0e, #e440bb, #655adc, #488cfb ); -webkit-mask: conic-gradient(#000 0 0) content-box, conic-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; padding: 4px; z-index: -1; animation: glowHue 1s linear infinite;
+ animation-play-state: running; }
+        .export-bar::after { content: ""; position: absolute; inset: 0; margin: 2px; border-radius: inherit; background: conic-gradient(#488cfb, #29dbbc, #ddf505, #ff9f0e, #e440bb, #655adc, #488cfb ); z-index: -2; animation: glowHue 1s linear infinite; animation-play-state: running; filter: blur(28px); opacity: .85; }
+        .export-input-bar { font-family: "Montserrat", sans-serif !important; flex: 1; height: 54px; color: #ffffff; background: none; border-radius: none; padding-right: 20px; border: none; outline: none; font-weight: 200; font-size: 15px; }
+        
+        @keyframes glowHue { from { filter: blur(28px) hue-rotate(0deg); } to { filter: blur(28px) hue-rotate(360deg); } }
+
+        .final-export-btn { width: 54px; height: 54px; padding-right: 20px; border-radius: 50%; background: none; color: #aaaaaa; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; position: relative; z-index: 5; }
+        .final-export-btn:hover { transform: scale(1.1); background: none; transition:transform .2s ease; }
+ 
+		#print-overlay { display: none; flex-direction: column; position: fixed; align-items: center; justify-content: center; top: 0; left: 0; width: 100vw; height: 100vh; gap: 5px; padding: 20px; font-family: Montserrat, sans-serif; background: rgba(0,0,0,0.5); backdrop-filter: blur(15px); z-index: 2000; }
+		.loader-track { position: relative; width: 400px; height: 32px; background: linear-gradient(135deg, #2a2a2a, #1a1a1a); border-radius: 16px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(255, 255, 255, 0.1); }
+		.liquid-fill { position: absolute; top: 2px; left: 2px; height: calc(100% - 4px); background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899, #f59e0b); border-radius: 14px; animation: fillProgress 4s ease-out infinite, colorShift 2s linear infinite; box-shadow: 0 0 12px rgba(124, 58, 237, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2); }
+		.loading-text { color: white; font-size: 18px; font-weight: 600; letter-spacing: 1px; padding: 15px; animation: textGlow 1s ease-in-out infinite; }
+		.dot { margin-left: 3px; animation: blink 1.5s infinite; }
+		.dot:nth-of-type(1) { animation-delay: 0s; }
+		.dot:nth-of-type(2) { animation-delay: 0.3s; }
+		.dot:nth-of-type(3) { animation-delay: 0.6s; }
+		@keyframes fillProgress { 0% { width: 4px; } 25% { width: 25%; } 50% { width: 50%; } 75% { width: 75%; } 100% { width: calc(100% - 4px); } }
+		@keyframes colorShift { 0% { filter: hue-rotate(0deg) brightness(1); } 33% { filter: hue-rotate(120deg) brightness(1.1); } 66% { filter: hue-rotate(240deg) brightness(0.9); } 100% { filter: hue-rotate(360deg) brightness(1); } }
+		@keyframes textGlow { 0%, 100% { opacity: 0.7; text-shadow: 0 0 8px rgba(139, 92, 246, 0.3); } 50% { opacity: 1; text-shadow: 0 0 16px rgba(139, 92, 246, 0.6); } }
+		@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    
+        @media print {
+			html, body { margin: 0 !important; padding: 0 !important; background: white !important; overflow: hidden !important; }
+			body * { visibility: hidden !important; }
+		#print-image-container,
+		#print-image-container * { visibility: visible !important; }
+		#print-image-container { position: absolute; inset: 0; display: flex !important; justify-content: center; align-items: center; transform: scale(0.99); background: white; }
+		body.print-polaroid #print-image-container { justify-content: flex-start; padding-left: 10mm; }
+		body.print-keychain #print-image-container { justify-content: flex-start; padding-left: 10mm; }
+		#print-image { width: var(--print-w); height: var(--print-h); object-fit: contain; }
+		.bg, .bg::before, .bg::after, .blob-center { display: none !important; }
+		@page { margin: 0; size: auto; }
+		body.print-landscape { @page{ size: landscape; } }
+		body.print-portrait { @page{ size: portrait; } } }
+
+        #print-stage { position: fixed; left: -99999px; top:0; pointer-events: none; }
+
+        /* EXPORT CLEAN MODE */
+        body.export-mode .bg,
+        body.export-mode .bg::before,
+        body.export-mode .bg::after,
+        body.export-mode .blob-center { display: none !important; animation: none !important; filter: none !important; }
+
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <div class="bg"><div class="blob-center"></div></div>
+
+    <div class="app-container">
+        <header class="header-section">
+            <h1 class="main-title">Snap Studio Photo Collage v2.0</h1>
+            <p class="sub-title">made by sonystark</p>
+        </header>
+
+        <div class="editor-workspace">
+            <aside class="glass-panel flex flex-col min-h-0 bg-white/5 backdrop-blur-xl p-6 rounded-[32px] border border-white/10">
+                <div class="mb-8 mt-2">
+                    <span class="panel-title-text">Template Collections</span>
+                </div>
+                
+                <div class="flex bg-black/20 p-1 rounded-[24px] border border-white/5" id="tab-controls">
+                    <button class="tab-btn active flex-1" onclick="switchCategory('free')">Free</button>
+                    <button class="tab-btn flex-1" onclick="switchCategory('polaroid')">Polaroid</button>
+					<button class="tab-btn flex-1" onclick="switchCategory('plain')">Plain</button>
+                    <button class="tab-btn flex-1" onclick="switchCategory('exclusive')">Exclusive</button>
+                    <button class="tab-btn flex-1" onclick="switchCategory('large')">Large</button>
+                    <button class="tab-btn flex-1" onclick="switchCategory('keychain')">Keychain</button>
+                </div>
+
+                <!-- Kontainer Template Sekarang diatur oleh Grid 5 kolom melalui CSS #template-container -->
+                <div class="pr-1 mt-1" id="template-scroll"><div id="template-container"></div></div>
+            </aside>
+
+            <main id="editor-container">
+                <div id="empty-state" class="text-center opacity-30">
+                    <i data-lucide="image" class="w-36 h-36 text-white mx-auto mb-10"></i>
+                    <p class="text-[24px] font-bold text-white uppercase tracking-[0.3em] mt-10">Select a frame template</p>
+                </div>
+                <div id="canvas-content" class="canvas-area"></div>
+            </main>
+
+            <aside class="flex flex-col gap-3">
+                <div class="glass-panel flex-1 flex flex-col min-h-0 bg-white/5 backdrop-blur-xl p-4">
+                    <div class="mb-8 mt-5">
+                        <span class="panel-title-text">Filters</span>
+                    </div>
+                    
+                    <div class="filter-row px-4">
+                        <div class="filter-item">
+                            <button class="filter-btn active" data-filter="None" onclick="applyFilter('none', this)"><i data-lucide="ban"></i></button>
+                            <div class="filter-label">None</div>
+                        </div>
+                        <div class="filter-item">
+                            <button class="filter-btn" data-filter="BW" onclick="applyFilter('bw', this)"><i data-lucide="contrast"></i></button>
+                            <div class="filter-label">B&W</div>
+                        </div>
+                        <div class="filter-item">
+                            <button class="filter-btn" data-filter="Sepia" onclick="applyFilter('sepia', this)"><i data-lucide="sun-medium"></i></button>
+                            <div class="filter-label">Sepia</div>
+                        </div>
+                        <div class="filter-item">
+                            <button class="filter-btn" data-filter="Punch" onclick="applyFilter('punch', this)"><i data-lucide="wand-sparkles"></i></button>
+                            <div class="filter-label">Punch</div>
+                        </div>
+                        <div class="filter-item">
+                            <button class="filter-btn" data-filter="Vintage" onclick="applyFilter('vintage', this)"><i data-lucide="videotape"></i></button>
+                            <div class="filter-label">Vintage</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-25 mt-2">
+                        <span class="panel-title-text">Mini Edits</span>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto space-y-2 px-4">
+                        <div class="adj-row mt-6">
+                            <span class="adj-label">Brightness</span>
+                            <div class="adj-slider-container">
+                                <span class="adj-tooltip" id="tip-brightness">100%</span>
+                                <input type="range" id="input-brightness" min="50" max="150" value="100" oninput="updateAdjust('brightness', this.value)">
+                            </div>
+                            <button class="reset-mini" onclick="resetAdjust('brightness', 100)"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                        </div>
+                        <div class="adj-row">
+                            <span class="adj-label">Contrast</span>
+                            <div class="adj-slider-container">
+                                <span class="adj-tooltip" id="tip-contrast">100%</span>
+                                <input type="range" id="input-contrast" min="50" max="150" value="100" oninput="updateAdjust('contrast', this.value)">
+                            </div>
+                            <button class="reset-mini" onclick="resetAdjust('contrast', 100)"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                        </div>
+                        <div class="adj-row">
+                            <span class="adj-label">Saturation</span>
+                            <div class="adj-slider-container">
+                                <span class="adj-tooltip" id="tip-saturate">100%</span>
+                                <input type="range" id="input-saturate" min="0" max="200" value="100" oninput="updateAdjust('saturate', this.value)">
+                            </div>
+                            <button class="reset-mini" onclick="resetAdjust('saturate', 100)"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                        </div>
+                        <div class="adj-row">
+                            <span class="adj-label">Temperature</span>
+                            <div class="adj-slider-container">
+                                <span class="adj-tooltip" id="tip-temp">0</span>
+                                <input type="range" id="input-temp" min="2000" max="9000" value="5500" oninput="updateAdjust('temp', this.value)">
+                            </div>
+                            <button class="reset-mini" onclick="resetAdjust('temp', 5500)"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                        </div>
+                        <div class="adj-row">
+                            <span class="adj-label">Tint</span>
+                            <div class="adj-slider-container">
+                                <span class="adj-tooltip" id="tip-tint">0</span>
+                                <input type="range" id="input-tint" min="-20" max="20" value="0" oninput="updateAdjust('tint', this.value)">
+                            </div>
+                            <button class="reset-mini" onclick="resetAdjust('tint', 0)"><i data-lucide="rotate-ccw" class="w-3 h-3"></i></button>
+                        </div>
+                    </div>
+                </div>
+				
+				<div class="flex-2">
+                    <div class="glass-panel flex-2 flex flex-col min-h-0 bg-white/5 backdrop-blur-xl p-4">
+                        <h3 class="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-2">Print Tips:</h3>
+                        <ul class="text-[11px] text-white/80 space-y-2">
+                            <li class="flex gap-2"><i data-lucide="circle-chevron-right" class="w-3 h-3"></i>Kategori template "Free, Plain, Exclusive, & Large" menggunakan orientasi layout "Portrait"</li>
+                            <li class="flex gap-2"><i data-lucide="circle-chevron-right" class="w-3 h-3"></i>Kategori template "Polaroid & Keychain" menggunakan orientasi layout "Landscape" </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="printCanvas()" class="action-btn btn-print"><i data-lucide="printer" class="w-3.5 h-3.5"></i> Print</button>
+                    <button onclick="openExportModal()" class="action-btn btn-export"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Export</button>
+                </div>
+				
+                <div id="print-overlay">
+					<div class="loading-text">Preparing your print<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>
+					<div class="loader-track"><div class="liquid-fill"></div></div>
+				</div>
+				
+            </aside>
+        </div>
+    </div>
+
+    <div id="print-stage"></div>
+    <div id="print-image-container" style="display:none;"><img id="print-image" /></div>
+
+    <div id="export-modal" onclick="closeExportModal()">
+        <div class="export-bar" onclick="event.stopPropagation()">
+            <input id="export-filename" class="export-input-bar" placeholder="Input customer name here"><button id="final-export-btn" onclick="processExport()" class="final-export-btn"><i data-lucide="download"></i></button>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" accept="image/*" class="hidden">
+    
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        const templateLibrary = [
+		
+			/* FREE */	
+            { id: 'f1', category: 'free', name: 'Portrait', frameUrl: 'https://i.imgur.com/jmYQXu4.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 118, l: 118, w: 964, h: 1446 }] } },
+            { id: 'f2', category: 'free', name: 'Landscape', frameUrl: 'https://i.imgur.com/PFbL6cv.png', paper: { size:'4R', widthIn:6, heightIn:4 }, 
+				config: { canvas: { w: 1800, h: 1200 }, zones: 
+				[{ t: 118, l: 237, w: 1326, h: 886 }] } },
+            { id: 'f3', category: 'free', name: '3in1', frameUrl: 'https://i.imgur.com/k6sCcJJ.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 118, l: 118, w: 964, h: 644 }, 
+				 { t: 821, l: 118, w: 452, h: 678 }, 
+				 { t: 821, l: 630, w: 452, h: 678 }] } },
+			{ id: 'f4', category: 'free', name: '4in1', frameUrl: 'https://i.imgur.com/ukjVji2.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 149, l: 117, w: 465, h: 698 }, 
+				 { t: 149, l: 619, w: 465, h: 698 }, 
+				 { t: 887, l: 117, w: 465, h: 698 },
+				 { t: 887, l: 619, w: 465, h: 698 }] } }, 
+			{ id: 'f5', category: 'free', name: '4in1 Round', frameUrl: 'https://i.imgur.com/IBU02cX.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 149, l: 117, w: 465, h: 698 }, 
+				 { t: 149, l: 619, w: 465, h: 698 }, 
+				 { t: 887, l: 117, w: 465, h: 698 },
+				 { t: 887, l: 619, w: 465, h: 698 }] } }, 
+			
+			/* POLAROID */	
+            { id: 'p1', category: 'polaroid', name: 'Polaroid', price: "IDR 10K x2", frameUrl: 'https://i.imgur.com/n2eBPex.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 615, h: 978 }, zones: 
+				[{ t: 66, l: 47, w: 522, h: 703 }] } },
+			{ id: 'p2', category: 'polaroid', name: 'Polaroid Round', price: "IDR 10K x2", frameUrl: 'https://i.imgur.com/0rpo54q.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 615, h: 978 }, zones: 
+				[{ t: 66, l: 47, w: 522, h: 703 }] } },
+			{ id: 'p3', category: 'polaroid', name: 'BFF', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/F4YdnE2.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 640, h: 1018 }, zones: 
+				[{ t: 103, l: 52, w: 537, h: 767 }] } },
+			{ id: 'p4', category: 'polaroid', name: 'Good Vibes', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/h3bH0wp.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 640, h: 1018 }, zones: 
+				[{ t: 187, l: 100, w: 453, h: 678 }] } },
+			{ id: 'p5', category: 'polaroid', name: 'Butterflies', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/Vp25QmG.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 638, h: 1016 }, zones: 
+				[{ t: 163, l: 62, w: 466, h: 699 }] } },
+			{ id: 'p6', category: 'polaroid', name: 'Pastel Love', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/80xyL6T.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 638, h: 1016 }, zones: 
+				[{ t: 86, l: 50, w: 539, h: 757 }] } },
+			{ id: 'p7', category: 'polaroid', name: 'Stars & Clouds', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/7UVTuYU.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 638, h: 1016 }, zones: 
+				[{ t: 106, l: 74, w: 491, h: 735 }] } },
+			{ id: 'p8', category: 'polaroid', name: 'Ramadan', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/acF0VCm.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 638, h: 1016 }, zones: 
+				[{ t: 113, l: 66, w: 507, h: 741 }] } },
+			
+			/* PLAIN */	
+			{ id: 'p1', category: 'plain', name: '4in1 Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/Dv7ZVQu.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 149, l: 117, w: 465, h: 698 }, 
+				 { t: 149, l: 619, w: 465, h: 698 }, 
+				 { t: 887, l: 117, w: 465, h: 698 },
+				 { t: 887, l: 619, w: 465, h: 698 }] } },
+			{ id: 'p2', category: 'plain', name: '4in1 Round Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/Liwk0Gl.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 149, l: 117, w: 465, h: 698 }, 
+				 { t: 149, l: 619, w: 465, h: 698 }, 
+				 { t: 887, l: 117, w: 465, h: 698 },
+				 { t: 887, l: 619, w: 465, h: 698 }] } },
+			{ id: 'p3', category: 'plain', name: 'Filmstrip x2 White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/ishfVv2.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 676 }, 
+				 { t: 89, l: 660, w: 483, h: 676 }, 
+				 { t: 822, l: 59, w: 483, h: 676 }, 
+				 { t: 822, l: 660, w: 483, h: 676 }] } },
+			{ id: 'p4', category: 'plain', name: 'Filmstrip x2 Round White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/mcrDZuD.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 676 }, 
+				 { t: 89, l: 660, w: 483, h: 676 }, 
+				 { t: 822, l: 59, w: 483, h: 676 }, 
+				 { t: 822, l: 660, w: 483, h: 676 }] } },
+			{ id: 'p5', category: 'plain', name: 'Filmstrip x2 Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/fc0yJ6F.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 676 }, 
+				 { t: 89, l: 660, w: 483, h: 676 }, 
+				 { t: 822, l: 59, w: 483, h: 676 }, 
+				 { t: 822, l: 660, w: 483, h: 676 }] } },
+			{ id: 'p6', category: 'plain', name: 'Filmstrip x2 Round Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/DJ3PDmW.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 676 }, 
+				 { t: 89, l: 660, w: 483, h: 676 }, 
+				 { t: 822, l: 59, w: 483, h: 676 }, 
+				 { t: 822, l: 660, w: 483, h: 676 }] } },
+			{ id: 'p7', category: 'plain', name: '6in1 White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/mNjSiBg.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 118, l: 59, w: 512, h: 404 }, 
+				 { t: 118, l: 630, w: 512, h: 404 }, 
+				 { t: 582, l: 59, w: 512, h: 404 }, 
+				 { t: 582, l: 630, w: 512, h: 404 }, 
+				 { t: 1046, l: 59, w: 512, h: 404 }, 
+				 { t: 1046, l: 630, w: 512, h: 404 }] } },
+			{ id: 'p8', category: 'plain', name: '6in1 Round White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/Mzn7Mrl.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 118, l: 59, w: 512, h: 404 }, 
+				 { t: 118, l: 630, w: 512, h: 404 }, 
+				 { t: 582, l: 59, w: 512, h: 404 }, 
+				 { t: 582, l: 630, w: 512, h: 404 }, 
+				 { t: 1046, l: 59, w: 512, h: 404 }, 
+				 { t: 1046, l: 630, w: 512, h: 404 }] } },
+			{ id: 'p9', category: 'plain', name: '6in1 Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/bhmCJyr.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 118, l: 59, w: 512, h: 404 }, 
+				 { t: 118, l: 630, w: 512, h: 404 }, 
+				 { t: 582, l: 59, w: 512, h: 404 }, 
+				 { t: 582, l: 630, w: 512, h: 404 }, 
+				 { t: 1046, l: 59, w: 512, h: 404 }, 
+				 { t: 1046, l: 630, w: 512, h: 404 }] } },
+			{ id: 'p10', category: 'plain', name: '6in1 Round Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/p0Wc1KO.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 118, l: 59, w: 512, h: 404 }, 
+				 { t: 118, l: 630, w: 512, h: 404 }, 
+				 { t: 582, l: 59, w: 512, h: 404 }, 
+				 { t: 582, l: 630, w: 512, h: 404 }, 
+				 { t: 1046, l: 59, w: 512, h: 404 }, 
+				 { t: 1046, l: 630, w: 512, h: 404 }] } },
+			{ id: 'p11', category: 'plain', name: 'Filmstrip x3 White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/5AUZVes.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 88, l: 657, w: 483, h: 439 }, 
+				 { t: 89, l: 59, w: 483, h: 439 }, 
+				 { t: 586, l: 657, w: 483, h: 411 }, 
+				 { t: 587, l: 59, w: 483, h: 411 }, 
+				 { t: 1057, l: 657, w: 483, h: 440 }, 
+				 { t: 1058, l: 59, w: 483, h: 440 }] } },
+			{ id: 'p12', category: 'plain', name: 'Filmstrip x3 Round White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/Z0AT7ak.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 88, l: 657, w: 483, h: 439 }, 
+				 { t: 89, l: 59, w: 483, h: 439 }, 
+				 { t: 586, l: 657, w: 483, h: 411 }, 
+				 { t: 587, l: 59, w: 483, h: 411 }, 
+				 { t: 1057, l: 657, w: 483, h: 440 }, 
+				 { t: 1058, l: 59, w: 483, h: 440 }] } },
+			{ id: 'p13', category: 'plain', name: 'Filmstrip x3 Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/7F93XXL.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 88, l: 657, w: 483, h: 439 }, 
+				 { t: 89, l: 59, w: 483, h: 439 }, 
+				 { t: 586, l: 657, w: 483, h: 411 }, 
+				 { t: 587, l: 59, w: 483, h: 411 }, 
+				 { t: 1057, l: 657, w: 483, h: 440 }, 
+				 { t: 1058, l: 59, w: 483, h: 440 }] } },
+			{ id: 'p14', category: 'plain', name: 'Filmstrip x3 Round Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/1PT3LOj.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 88, l: 657, w: 483, h: 439 }, 
+				 { t: 89, l: 59, w: 483, h: 439 }, 
+				 { t: 586, l: 657, w: 483, h: 411 }, 
+				 { t: 587, l: 59, w: 483, h: 411 }, 
+				 { t: 1057, l: 657, w: 483, h: 440 }, 
+				 { t: 1058, l: 59, w: 483, h: 440 }] } },
+			{ id: 'p15', category: 'plain', name: 'Filmstrip x4 White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/Lcd1DDQ.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 323 }, 
+				 { t: 89, l: 660, w: 483, h: 323 }, 
+				 { t: 442, l: 59, w: 483, h: 323 }, 
+				 { t: 442, l: 660, w: 483, h: 323 },
+				 { t: 794, l: 59, w: 483, h: 323 }, 
+				 { t: 794, l: 660, w: 483, h: 323 }, 
+				 { t: 1146, l: 59, w: 483, h: 323 }, 
+				 { t: 1146, l: 660, w: 483, h: 323 }] } },
+			{ id: 'p16', category: 'plain', name: 'Filmstrip x4 Round White', price: "IDR 23K", frameUrl: 'https://i.imgur.com/wPl3Rzr.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 323 }, 
+				 { t: 89, l: 660, w: 483, h: 323 }, 
+				 { t: 442, l: 59, w: 483, h: 323 }, 
+				 { t: 442, l: 660, w: 483, h: 323 },
+				 { t: 794, l: 59, w: 483, h: 323 }, 
+				 { t: 794, l: 660, w: 483, h: 323 }, 
+				 { t: 1146, l: 59, w: 483, h: 323 }, 
+				 { t: 1146, l: 660, w: 483, h: 323 }] } },
+			{ id: 'p17', category: 'plain', name: 'Filmstrip x4 Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/F11D9pK.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 323 }, 
+				 { t: 89, l: 660, w: 483, h: 323 }, 
+				 { t: 442, l: 59, w: 483, h: 323 }, 
+				 { t: 442, l: 660, w: 483, h: 323 },
+				 { t: 794, l: 59, w: 483, h: 323 }, 
+				 { t: 794, l: 660, w: 483, h: 323 }, 
+				 { t: 1146, l: 59, w: 483, h: 323 }, 
+				 { t: 1146, l: 660, w: 483, h: 323 }] } },
+			{ id: 'p18', category: 'plain', name: 'Filmstrip x4 Round Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/sQ8wUVC.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 323 }, 
+				 { t: 89, l: 660, w: 483, h: 323 }, 
+				 { t: 442, l: 59, w: 483, h: 323 }, 
+				 { t: 442, l: 660, w: 483, h: 323 },
+				 { t: 794, l: 59, w: 483, h: 323 }, 
+				 { t: 794, l: 660, w: 483, h: 323 }, 
+				 { t: 1146, l: 59, w: 483, h: 323 }, 
+				 { t: 1146, l: 660, w: 483, h: 323 }] } },
+			
+			/* EXCLUSIVE */	
+			{ id: 'e1', category: 'exclusive', name: 'Spotify 6in1', price: "IDR 25K", frameUrl: 'https://i.imgur.com/L75Tn21.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 118, l: 59, w: 512, h: 405 }, 
+				 { t: 118, l: 630, w: 512, h: 405 }, 
+				 { t: 581, l: 59, w: 512, h: 405 },
+				 { t: 581, l: 630, w: 512, h: 405 }, 
+				 { t: 1045, l: 59, w: 512, h: 405 }, 
+				 { t: 1045, l: 630, w: 512, h: 405 }] } },
+            { id: 'e2', category: 'exclusive', name: 'Spotify Strip x3', price: "IDR 25K", frameUrl: 'https://i.imgur.com/2vIxbKV.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 106, l: 61, w: 478, h: 440 }, 
+				 { t: 106, l: 661, w: 478, h: 440 }, 
+				 { t: 581, l: 61, w: 478, h: 423 }, 
+				 { t: 581, l: 661, w: 478, h: 423 }, 
+				 { t: 1039, l: 61, w: 478, h: 440 }, 
+				 { t: 1039, l: 661, w: 478, h: 440 }] } },
+			{ id: 'e3', category: 'exclusive', name: 'Spotify Strip x2', price: "IDR 25K", frameUrl: 'https://i.imgur.com/766Ztk8.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 106, l: 61, w: 478, h: 661 }, 
+				 { t: 106, l: 661, w: 478, h: 661 },  
+				 { t: 818, l: 61, w: 478, h: 661 }, 
+				 { t: 818, l: 661, w: 478, h: 661 }] } },
+			{ id: 'e4', category: 'exclusive', name: 'Spotify Strip x4', price: "IDR 25K", frameUrl: 'https://i.imgur.com/46bmRqX.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 89, l: 59, w: 483, h: 323 }, 
+				 { t: 89, l: 660, w: 483, h: 323 }, 
+				 { t: 442, l: 59, w: 483, h: 323 }, 
+				 { t: 442, l: 660, w: 483, h: 323 }, 
+				 { t: 794, l: 59, w: 483, h: 323 }, 
+				 { t: 794, l: 660, w: 483, h: 323 }, 
+				 { t: 1146, l: 59, w: 483, h: 323 }, 
+				 { t: 1146, l: 660, w: 483, h: 323 }] } },
+			{ id: 'e5', category: 'exclusive', name: 'Holoplast', price: "IDR 25K", frameUrl: 'https://i.imgur.com/4XB9kLV.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 149, l: 117, w: 465, h: 698 }, 
+				 { t: 149, l: 619, w: 465, h: 698 }, 
+				 { t: 887, l: 117, w: 465, h: 698 }, 
+				 { t: 887, l: 619, w: 465, h: 698 }] } },
+			{ id: 'e6', category: 'exclusive', name: 'Instagram', price: "IDR 25K", frameUrl: 'https://i.imgur.com/TsG9r3P.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 172, l: 132, w: 451, h: 676 }, 
+				 { t: 172, l: 619, w: 451, h: 676 }, 
+				 { t: 888, l: 132, w: 451, h: 676 }, 
+				 { t: 888, l: 619, w: 451, h: 676 }] } },
+			{ id: 'e7', category: 'exclusive', name: 'Brushed Metal 4in1', price: "IDR 25K", frameUrl: 'https://i.imgur.com/s5B0ibw.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 92, l: 94, w: 477, h: 620 }, 
+				 { t: 92, l: 630, w: 477, h: 620 }, 
+				 { t: 771, l: 94, w: 477, h: 620 }, 
+				 { t: 771, l: 630, w: 477, h: 620 }] } },
+			{ id: 'e8', category: 'exclusive', name: 'Brushed Metal Strip', price: "IDR 25K", frameUrl: 'https://i.imgur.com/BGKWaJ5.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 70, l: 53, w: 495, h: 345 }, 
+				 { t: 70, l: 653, w: 495, h: 345 }, 
+				 { t: 449, l: 53, w: 495, h: 345 }, 
+				 { t: 449, l: 653, w: 495, h: 345 }, 
+				 { t: 828, l: 53, w: 495, h: 345 }, 
+				 { t: 828, l: 653, w: 495, h: 345 }, 
+				 { t: 1207, l: 53, w: 495, h: 345 },
+				 { t: 1207, l: 653, w: 495, h: 345 }] } },
+			{ id: 'e9', category: 'exclusive', name: 'Casino', price: "IDR 25K", frameUrl: 'https://i.imgur.com/NUiwLL2.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 168, l: 110, w: 478, h: 717 }, 
+				 { t: 168, l: 613, w: 478, h: 717 }, 
+				 { t: 915, l: 110, w: 478, h: 717 }, 
+				 { t: 915, l: 613, w: 478, h: 717 }] } },
+			{ id: 'e10', category: 'exclusive', name: 'Lego Strip x3', price: "IDR 25K", frameUrl: 'https://i.imgur.com/uTpjbmA.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1702 }, zones: 
+				[{ t: 61, l: 57, w: 485, h: 485 }, 
+				 { t: 61, l: 657, w: 485, h: 485 }, 
+				 { t: 608, l: 57, w: 486, h: 486 }, 
+				 { t: 608, l: 657, w: 486, h: 486 }, 
+				 { t: 1155, l: 58, w: 486, h: 486 }, 
+				 { t: 1155, l: 657, w: 486, h: 486 }] } },
+			{ id: 'e11', category: 'exclusive', name: 'Have Fun Strip Light', price: "IDR 25K", frameUrl: 'https://i.imgur.com/u8RYeLo.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 157, l: 46, w: 508, h: 339 }, 
+				 { t: 157, l: 646, w: 508, h: 339 }, 
+				 { t: 533, l: 46, w: 508, h: 339 }, 
+				 { t: 533, l: 646, w: 508, h: 339 }, 
+				 { t: 908, l: 46, w: 508, h: 339 }, 
+				 { t: 908, l: 646, w: 508, h: 339 }, 
+				 { t: 1283, l: 46, w: 508, h: 339 },
+				 { t: 1283, l: 646, w: 508, h: 339 }] } },
+			{ id: 'e12', category: 'exclusive', name: 'Have Fun Strip Dark', price: "IDR 25K", frameUrl: 'https://i.imgur.com/VKQG0Tw.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 157, l: 46, w: 508, h: 339 }, 
+				 { t: 157, l: 646, w: 508, h: 339 }, 
+				 { t: 533, l: 46, w: 508, h: 339 }, 
+				 { t: 533, l: 646, w: 508, h: 339 }, 
+				 { t: 908, l: 46, w: 508, h: 339 }, 
+				 { t: 908, l: 646, w: 508, h: 339 }, 
+				 { t: 1283, l: 46, w: 508, h: 339 },
+				 { t: 1283, l: 646, w: 508, h: 339 }] } },
+			{ id: 'e13', category: 'exclusive', name: 'Snap Studio Label White', price: "IDR 25K", frameUrl: 'https://i.imgur.com/vZseFOG.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 114, l: 118, w: 462, h: 638 }, 
+				 { t: 114, l: 621, w: 462, h: 638 }, 
+				 { t: 792, l: 118, w: 462, h: 638 }, 
+				 { t: 792, l: 621, w: 462, h: 638 }] } },
+			{ id: 'e14', category: 'exclusive', name: 'Snap Studio Label Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/U0RuL1s.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 114, l: 118, w: 462, h: 638 }, 
+				 { t: 114, l: 621, w: 462, h: 638 }, 
+				 { t: 792, l: 118, w: 462, h: 638 }, 
+				 { t: 792, l: 621, w: 462, h: 638 }] } },
+			{ id: 'e15', category: 'exclusive', name: 'Your Memories', price: "IDR 25K", frameUrl: 'https://i.imgur.com/HlXVLfU.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 194, l: 122, w: 446, h: 674 }, 
+				 { t: 194, l: 632, w: 446, h: 674 }, 
+				 { t: 966, l: 121, w: 446, h: 674 }, 
+				 { t: 966, l: 632, w: 446, h: 674 }] } },
+			{ id: 'e16', category: 'exclusive', name: 'Vaporwave UI 6in1', price: "IDR 25K", frameUrl: 'https://i.imgur.com/CnbLs79.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 156, l: 59, w: 512, h: 366 }, 
+				 { t: 156, l: 630, w: 512, h: 366 }, 
+				 { t: 620, l: 59, w: 512, h: 366 }, 
+				 { t: 620, l: 630, w: 512, h: 366 }, 
+				 { t: 1084, l: 59, w: 512, h: 366 }, 
+				 { t: 1084, l: 630, w: 512, h: 366 }] } },
+			{ id: 'e17', category: 'exclusive', name: 'Vaporwave UI Strip x4', price: "IDR 25K", frameUrl: 'https://i.imgur.com/RpQpuGF.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 127, l: 59, w: 483, h: 285 }, 
+				 { t: 127, l: 660, w: 482, h: 285 }, 
+				 { t: 480, l: 59, w: 483, h: 285 }, 
+				 { t: 480, l: 660, w: 482, h: 285 }, 
+				 { t: 833, l: 59, w: 483, h: 284 }, 
+				 { t: 833, l: 660, w: 482, h: 284 }, 
+				 { t: 1185, l: 59, w: 483, h: 284 },
+				 { t: 1185, l: 660, w: 482, h: 284 }] } },
+			{ id: 'e18', category: 'exclusive', name: 'iCam 4in1', price: "IDR 25K", frameUrl: 'https://i.imgur.com/V7rDvCu.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 160, l: 118, w: 462, h: 638 }, 
+				 { t: 160, l: 621, w: 462, h: 638 }, 
+				 { t: 838, l: 118, w: 462, h: 638 }, 
+				 { t: 838, l: 621, w: 462, h: 638 }] } },
+			{ id: 'e19', category: 'exclusive', name: 'Daia', price: "IDR 25K", frameUrl: 'https://i.imgur.com/zfd5xOf.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 93, l: 94, w: 477, h: 656 }, 
+				 { t: 93, l: 629, w: 477, h: 655 }, 
+				 { t: 808, l: 94, w: 477, h: 656 }, 
+				 { t: 808, l: 629, w: 477, h: 655 }] } },
+			{ id: 'e20', category: 'exclusive', name: 'Mail Strip', price: "IDR 25K", frameUrl: 'https://i.imgur.com/aMmATXL.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1702 }, zones: 
+				[{ t: 74, l: 60, w: 468, h: 312 }, 
+				 { t: 74, l: 660, w: 468, h: 312 }, 
+				 { t: 433, l: 73, w: 468, h: 312 }, 
+				 { t: 433, l: 673, w: 468, h: 312 },
+				 { t: 798, l: 58, w: 468, h: 312 }, 
+				 { t: 798, l: 658, w: 468, h: 312 }, 
+				 { t: 1161, l: 73, w: 468, h: 312 }, 
+				 { t: 1161, l: 673, w: 468, h: 312 }] } },
+			{ id: 'e21', category: 'exclusive', name: 'Dark Mode', price: "IDR 25K", frameUrl: 'https://i.imgur.com/NVl6H0U.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 167, l: 118, w: 453, h: 682 }, 
+				 { t: 167, l: 629, w: 453, h: 682 }, 
+				 { t: 909, l: 118, w: 453, h: 681 }, 
+				 { t: 909, l: 629, w: 453, h: 681 }] } },
+			{ id: 'e22', category: 'exclusive', name: 'Fragile Strip White', price: "IDR 25K", frameUrl: 'https://i.imgur.com/6glU4i7.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 70, l: 53, w: 495, h: 345 }, 
+				 { t: 70, l: 653, w: 494, h: 345 }, 
+				 { t: 449, l: 53, w: 495, h: 345 }, 
+				 { t: 449, l: 653, w: 494, h: 345 },
+				 { t: 828, l: 53, w: 495, h: 345 }, 
+				 { t: 828, l: 653, w: 494, h: 345 }, 
+				 { t: 1207, l: 53, w: 495, h: 345 }, 
+				 { t: 1207, l: 653, w: 494, h: 345 }] } },
+			{ id: 'e23', category: 'exclusive', name: 'Fragile Strip Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/lkqCBXD.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 70, l: 53, w: 495, h: 345 }, 
+				 { t: 70, l: 653, w: 494, h: 345 }, 
+				 { t: 449, l: 53, w: 495, h: 345 }, 
+				 { t: 449, l: 653, w: 494, h: 345 },
+				 { t: 828, l: 53, w: 495, h: 345 }, 
+				 { t: 828, l: 653, w: 494, h: 345 }, 
+				 { t: 1207, l: 53, w: 495, h: 345 }, 
+				 { t: 1207, l: 653, w: 494, h: 345 }] } },
+			{ id: 'e24', category: 'exclusive', name: 'Sushi Wave', price: "IDR 25K", frameUrl: 'https://i.imgur.com/i5B6nJe.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 76, l: 85, w: 505, h: 698 }, 
+				 { t: 76, l: 610, w: 505, h: 698 }, 
+				 { t: 795, l: 85, w: 505, h: 699 }, 
+				 { t: 795, l: 610, w: 505, h: 699 }] } },
+				 
+			/* LARGE */	 
+            { id: 'l1', category: 'large', name: 'Newspaper', price: "IDR 25K", frameUrl: 'https://i.imgur.com/cEU9xw0.png', paper: { size:'A4', widthIn:8.27, heightIn:11.69 }, 
+				config: { canvas: { w: 2480, h: 3508 }, zones: 
+				[{ t: 737, l: 112, w: 2254, h: 1275 }, 
+				 { t: 2333, l: 112, w: 1026, h: 642 }, 
+				 { t: 2333, l: 1162, w: 587, h: 371 }, 
+				 { t: 2862, l: 1779, w: 588, h: 412 }] } }, 
+			
+			/* KEYCHAIN */	
+			{ id: 'k1', category: 'keychain', name: 'Test', price: "IDR 10K", frameUrl: 'https://i.imgur.com/Co8o0FL.png', templateMode: "native", align: "left-center", 
+				config: { canvas: { w: 354, h: 768 }, zones: 
+				[{ t: 35, l: 35, w: 284, h: 332 }, 
+				 { t: 402, l: 35, w: 284, h: 332 }] } },
+        ];
+
+        let currentActiveSlot = null, currentTemplate = null;
+        let activeAdjusts = { brightness: 100, contrast: 100, saturate: 100, temp: 5500, tint: 0 };
+        let activeFilterPreset = 'none';
+        let currentCategory = 'free';
+
+        const canvasContent = document.getElementById('canvas-content');
+        const editorContainer = document.getElementById('editor-container');
+        const fileInput = document.getElementById('file-input');
+
+        function renderTemplates() {
+            const container = document.getElementById('template-container');
+            container.innerHTML = '';
+            
+            const filtered = templateLibrary.filter(t => {
+                if (currentCategory === 'free') return t.category === 'free';
+                if (currentCategory === 'polaroid') return t.category === 'polaroid';
+				if (currentCategory === 'plain') return t.category === 'plain';
+                if (currentCategory === 'exclusive') return t.category === 'exclusive';
+                if (currentCategory === 'large') return t.category === 'large';
+                if (currentCategory === 'keychain') return t.category === 'keychain';
+                return t.category === currentCategory;
+            });
+
+            filtered.forEach(tpl => {
+                const item = document.createElement('div');
+                item.className = 'template-item';
+                
+                const thumb = document.createElement('div');
+                thumb.className = 'template-thumb';
+				if (tpl.price) {thumb.dataset.tooltip = tpl.price;}
+                if (currentTemplate && currentTemplate.id === tpl.id) thumb.classList.add('template-active');
+                
+                thumb.innerHTML = `<img src="${tpl.frameUrl}" alt="${tpl.name}">`;
+                
+                const label = document.createElement('span');
+                label.className = 'template-name';
+                label.innerText = tpl.name;
+
+                thumb.onclick = () => {
+                    document.querySelectorAll('.template-thumb').forEach(el => el.classList.remove('template-active'));
+                    thumb.classList.add('template-active');
+                    selectTemplate(tpl);
+                };
+
+                item.appendChild(thumb);
+                item.appendChild(label);
+                container.appendChild(item);
+            });
+        }
+
+        function switchCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                const btnText = btn.innerText.toLowerCase();
+                const isMatch = (cat === 'free' && btnText === 'free') || 
+                                (cat === 'polaroid' && btnText === 'polaroid') ||
+								(cat === 'plain' && btnText === 'plain') ||
+                                (cat === 'exclusive' && btnText === 'exclusive') ||
+                                (cat === 'large' && btnText === 'large') ||
+                                (cat === 'keychain' && btnText === 'keychain');
+                btn.classList.toggle('active', isMatch);
+            });
+            renderTemplates();
+        }
+
+        function selectTemplate(tpl) {
+            currentTemplate = tpl;
+            document.getElementById('empty-state').classList.add('hidden');
+            canvasContent.style.display = 'block';
+            canvasContent.innerHTML = '';
+            canvasContent.style.width = tpl.config.canvas.w + "px";
+            canvasContent.style.height = tpl.config.canvas.h + "px";
+
+            tpl.config.zones.forEach((slot) => {
+                const zone = document.createElement('div');
+                zone.className = 'drop-zone group';
+                Object.assign(zone.dataset, { scale: '1', posX: '0', posY: '0', minScale: '1' });
+                zone.style.cssText = `top:${slot.t}px; left:${slot.l}px; width:${slot.w}px; height:${slot.h}px;`;
+                
+                zone.innerHTML = `
+                    <div class="uploader-ui flex flex-col items-center text-center group-[.has-img]:hidden">
+                        <i data-lucide="image-plus" class="w-16 h-16 mb-2 icon-upload"></i>
+                        <span class="uploader-title" style="font-size: 24px;">Drop Photo</span>
+                        <span class="uploader-sub" style="font-size: 20px;">or click to browse</span>
+                    </div>
+                    <div class="zone-controls">
+                        <button class="ctrl-btn btn-reset" title="Reset Position"><i data-lucide="refresh-cw" class="w-6 h-6"></i></button>
+                        <button class="ctrl-btn btn-delete text-red-500" title="Delete Image"><i data-lucide="trash-2" class="w-6 h-6"></i></button>
+                    </div>`;
+
+                zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('drag-over'); };
+                zone.ondragleave = () => zone.classList.remove('drag-over');
+                zone.ondrop = (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) handleImageUpload(file, zone);
+                };
+
+                zone.onclick = (e) => {
+                    if (e.target.closest('.ctrl-btn')) return;
+                    if (zone.classList.contains('has-img')) return;
+                    currentActiveSlot = zone; fileInput.click();
+                };
+
+                zone.querySelector('.btn-reset').onclick = (e) => {
+                    e.stopPropagation();
+                    const img = zone.querySelector('img'); if (!img) return;
+                    const ms = parseFloat(zone.dataset.minScale);
+                    const startX = (zone.offsetWidth - img.naturalWidth * ms) / 2;
+                    const startY = (zone.offsetHeight - img.naturalHeight * ms) / 2;
+                    updateImgTransform(img, zone, ms, startX, startY);
+                };
+
+                zone.querySelector('.btn-delete').onclick = (e) => {
+                    e.stopPropagation();
+                    const img = zone.querySelector('img'); if (img) img.remove();
+                    zone.classList.remove('has-img');
+                };
+
+                let isDragging = false, lastMouseX, lastMouseY;
+                zone.onmousedown = (e) => {
+                    const img = zone.querySelector('img'); 
+                    if (!img || e.target.closest('.ctrl-btn')) return;
+                    isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY;
+                    e.preventDefault();
+                };
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const img = zone.querySelector('img'); if (!img) return;
+                    const deltaX = (e.clientX - lastMouseX) / getCanvasScale();
+                    const deltaY = (e.clientY - lastMouseY) / getCanvasScale();
+                    lastMouseX = e.clientX; lastMouseY = e.clientY;
+                    const currentX = parseFloat(zone.dataset.posX);
+                    const currentY = parseFloat(zone.dataset.posY);
+                    const currentScale = parseFloat(zone.dataset.scale);
+                    updateImgTransform(img, zone, currentScale, currentX + deltaX, currentY + deltaY);
+                });
+
+                window.addEventListener('mouseup', () => isDragging = false);
+                
+                zone.onwheel = (e) => {
+                    const img = zone.querySelector('img'); if(!img) return; 
+                    e.preventDefault();
+                    
+                    const oldScale = parseFloat(zone.dataset.scale);
+                    const minScale = parseFloat(zone.dataset.minScale);
+                    const zoomIntensity = 0.1;
+                    let newScale = e.deltaY < 0 ? oldScale * (1 + zoomIntensity) : oldScale * (1 - zoomIntensity);
+                    newScale = Math.max(minScale, Math.min(newScale, 10));
+
+                    const rect = zone.getBoundingClientRect();
+                    const canvasScale = getCanvasScale();
+                    const mouseX = (e.clientX - rect.left) / canvasScale;
+                    const mouseY = (e.clientY - rect.top) / canvasScale;
+                    
+                    const oldPosX = parseFloat(zone.dataset.posX);
+                    const oldPosY = parseFloat(zone.dataset.posY);
+
+                    const ratio = newScale / oldScale;
+                    const newPosX = mouseX - (mouseX - oldPosX) * ratio;
+                    const newPosY = mouseY - (mouseY - oldPosY) * ratio;
+
+                    updateImgTransform(img, zone, newScale, newPosX, newPosY);
+                };
+
+                canvasContent.appendChild(zone);
+            });
+
+            const fImg = document.createElement('img');
+            fImg.crossOrigin = "anonymous"; fImg.src = tpl.frameUrl; fImg.className = 'frame-layer';
+            canvasContent.appendChild(fImg);
+            
+            lucide.createIcons();
+            resizeEditor();
+        }
+
+        function getCanvasScale() {
+            if (!canvasContent || !currentTemplate) return 1;
+            return Math.min((editorContainer.clientWidth - 40) / currentTemplate.config.canvas.w, (editorContainer.clientHeight - 40) / currentTemplate.config.canvas.h);
+        }
+
+        function updateImgTransform(img, zone, scale, x, y) {
+            const zW = zone.offsetWidth;
+            const zH = zone.offsetHeight;
+            const iW = img.naturalWidth * scale;
+            const iH = img.naturalHeight * scale;
+
+            let clampedX = x;
+            if (iW >= zW) clampedX = Math.min(0, Math.max(x, zW - iW));
+            else clampedX = (zW - iW) / 2;
+
+            let clampedY = y;
+            if (iH >= zH) clampedY = Math.min(0, Math.max(y, zH - iH));
+            else clampedY = (zH - iH) / 2;
+
+            zone.dataset.scale = scale;
+            zone.dataset.posX = clampedX;
+            zone.dataset.posY = clampedY;
+            
+            img.style.transform = `translate(${clampedX}px, ${clampedY}px) scale(${scale})`;
+        }
+
+        function applyFilter(preset, btn) {
+            activeFilterPreset = preset;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            refreshVisuals();
+        }
+
+        function moveTooltip(slider, tooltip){
+
+            const min = slider.min ? slider.min : 0;
+            const max = slider.max ? slider.max : 100;
+            const val = slider.value;
+
+            const percent = (val - min) / (max - min);
+
+            const sliderWidth = slider.offsetWidth;
+
+            const position = percent * sliderWidth;
+
+            tooltip.style.left = position + "px";
+
+        }
+
+        function updateAdjust(type, val) {
+            activeAdjusts[type] = parseInt(val);
+            const slider = document.getElementById(`input-${type}`);
+            const tooltip = document.getElementById(`tip-${type}`);
+            let displayVal; if (type === "temp") {displayVal = val + "K";} else if (type === "tint") {displayVal = val;} else {displayVal = val + "%";} ;
+            tooltip.innerText = displayVal;
+            moveTooltip(slider, tooltip);
+            document.getElementById(`tip-${type}`).innerText = displayVal;
+            refreshVisuals();
+            document.querySelectorAll("input[type=range]").forEach(slider=>{
+            const type = slider.id.replace("input-","");
+            const tooltip = document.getElementById("tip-"+type);
+            moveTooltip(slider,tooltip);
+            });
+        }
+
+        function resetAdjust(type, defaultVal) {
+            const input = document.getElementById(`input-${type}`);
+            if (input) { input.value = defaultVal; updateAdjust(type, defaultVal); }
+        }
+
+        function refreshVisuals() {
+            const photos = document.querySelectorAll('.drop-zone img');
+            photos.forEach(img => {
+                let filterStr = `brightness(${activeAdjusts.brightness}%) contrast(${activeAdjusts.contrast}%) saturate(${activeAdjusts.saturate}%) `;
+                if (activeFilterPreset === 'bw') filterStr += 'grayscale(100%) ';
+                if (activeFilterPreset === 'sepia') filterStr += 'sepia(100%) ';
+                if (activeFilterPreset === 'punch') filterStr += 'contrast(120%) saturate(120%) sepia(20%) ';
+                if (activeFilterPreset === 'vintage') filterStr += 'contrast(90%) brightness(95%) sepia(40%) ';
+                const kelvin = activeAdjusts.temp;
+                const neutral = 5500; let warm = 0; let cool = 0;
+                if (kelvin > neutral) {warm = (kelvin - neutral) / 3500; }
+                if(kelvin < neutral) {cool = (neutral - kelvin) / 3500; }
+                filterStr += ` sepia(${warm*30}%) hue-rotate(${cool*200}deg)`;
+                const tintVal = activeAdjusts.tint * -1; filterStr += ` hue-rotate(${tintVal}deg)`;
+                img.style.filter = filterStr;
+            });
+        }
+
+        fileInput.onchange = (e) => {
+            if (!e.target.files[0] || !currentActiveSlot) return;
+            handleImageUpload(e.target.files[0], currentActiveSlot);
+            e.target.value = '';
+        };
+
+        function handleImageUpload(file, zone) {
+            const r = new FileReader();
+            r.onload = (ev) => {
+                let img = zone.querySelector('img') || document.createElement('img');
+                img.src = ev.target.result;
+                img.onload = () => {
+                    const ms = Math.max(zone.offsetWidth / img.naturalWidth, zone.offsetHeight / img.naturalHeight);
+                    zone.dataset.minScale = ms;
+                    img.style.width = img.naturalWidth + 'px'; 
+                    img.style.height = img.naturalHeight + 'px';
+                    if (!zone.contains(img)) zone.appendChild(img);
+                    zone.classList.add('has-img');
+                    
+                    const startX = (zone.offsetWidth - img.naturalWidth * ms) / 2;
+                    const startY = (zone.offsetHeight - img.naturalHeight * ms) / 2;
+                    updateImgTransform(img, zone, ms, startX, startY);
+                    refreshVisuals();
+                };
+            };
+            r.readAsDataURL(file);
+        }
+
+        function resizeEditor() {
+            if (!canvasContent || !currentTemplate) return;
+            canvasContent.style.transform = `scale(${getCanvasScale()})`;
+        }
+
+        window.onresize = resizeEditor;
+        
+        function openExportModal() { 
+            const modal = document.getElementById('export-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+        }
+        
+        function closeExportModal() { 
+            const modal = document.getElementById('export-modal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        function buildCanvasFilter(){
+            let filter = `
+                brightness(${activeAdjusts.brightness}%)
+                contrast(${activeAdjusts.contrast}%)
+                saturate(${activeAdjusts.saturate}%)
+            `;
+            if(activeFilterPreset==="bw")
+                filter += " grayscale(100%)";
+            if(activeFilterPreset==="sepia")
+                filter += " sepia(100%)";
+            if(activeFilterPreset==="punch")
+                filter += " contrast(120%) saturate(120%) sepia(20%)";
+            if(activeFilterPreset==="vintage")
+                filter += " contrast(90%) brightness(95%) sepia(40%)";
+            const kelvin = activeAdjusts.temp;
+            const neutral = 5500;
+            let warm=0,cool=0;
+            if(kelvin>neutral) warm=(kelvin-neutral)/3500;
+            if(kelvin<neutral) cool=(neutral-kelvin)/3500;
+            filter += ` sepia(${warm*30}%) hue-rotate(${cool*200}deg)`;
+            const tintVal = activeAdjusts.tint * -1;
+            filter += ` hue-rotate(${tintVal}deg)`;
+            return filter;
+        }
+
+        function bakeFiltersToImages(){
+            const filterString = buildCanvasFilter();
+            document.querySelectorAll('.drop-zone img').forEach(img=>{
+                const zone = img.closest('.drop-zone');
+                const canvas = document.createElement("canvas");
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext("2d");
+                // ⭐ APPLY FILTER LANGSUNG KE CANVAS
+                ctx.filter = filterString;
+                ctx.drawImage(img,0,0);
+                img.dataset.originalSrc = img.src;
+                img.src = canvas.toDataURL("image/png");
+            });
+        }
+
+        function restoreOriginalImages(){
+            document.querySelectorAll('.drop-zone img').forEach(img=>{
+                if(img.dataset.originalSrc){
+                    img.src = img.dataset.originalSrc;
+                    delete img.dataset.originalSrc;
+                }
+            });
+        }
+
+        function disablePreviewRadius(){
+            const canvasArea = document.querySelector(".canvas-area");
+            const frameLayer = document.querySelector(".frame-layer");
+            return {
+                canvasRadius: canvasArea.style.borderRadius,
+                frameRadius: frameLayer ? frameLayer.style.borderRadius : null,
+                canvasArea,
+                frameLayer
+            };
+        }
+
+        function applyExportRadius(state){
+            state.canvasArea.style.borderRadius = "0px";
+            if(state.frameLayer)
+                state.frameLayer.style.borderRadius = "0px";
+        }
+
+        function restorePreviewRadius(state){
+            state.canvasArea.style.borderRadius = state.canvasRadius || "";
+            if(state.frameLayer)
+                state.frameLayer.style.borderRadius = state.frameRadius || "";
+        }
+
+        async function processExport(){
+            const input = document.getElementById("export-filename");
+            const filename =
+                (input?.value || "SnapStudio_Collage").trim();
+            const btn = document.querySelector(".final-export-btn");
+            if(btn) btn.disabled = true;
+            try{
+                /* PREPARE IMAGE STATE */
+                bakeFiltersToImages();
+                await waitImagesReady();
+                await new Promise(r=>setTimeout(r,80));
+                const radiusState = disablePreviewRadius();
+                applyExportRadius(radiusState);
+                /* CLONE CANVAS (IMPORTANT) */
+                const clone = canvasContent.cloneNode(true);
+                clone.style.transform = "none";
+                clone.style.position = "fixed";
+                clone.style.left = "-99999px";
+                clone.style.top = "0";
+                clone.style.pointerEvents = "none";
+                clone.style.zIndex = "-1";
+                document.body.appendChild(clone);
+                const width  = currentTemplate.config.canvas.w;
+                const height = currentTemplate.config.canvas.h;
+                document.body.classList.add("export-mode");
+                /* RENDER CLONE ONLY */
+                const canvas = await html2canvas(clone,{
+                    width: width,
+                    height: height,
+                    scale: 1,
+                    useCORS:true,
+                    backgroundColor:"#ffffff",
+                    imageTimeout:0
+                });
+                /* CLEANUP */
+                clone.remove();
+                restorePreviewRadius(radiusState);
+                restoreOriginalImages();
+                document.body.classList.remove("export-mode");
+                /* DOWNLOAD FILE */
+                const link = document.createElement("a");
+                link.download = filename + ".jpg";
+                link.href = canvas.toDataURL("image/jpeg",1);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                closeExportModal();
+            }
+            catch(err){
+                console.error("EXPORT ERROR:",err);
+                alert("Export gagal, cek console.");
+            }
+            if(btn) btn.disabled = false;
+        }
+
+        function waitImagesReady(){
+            const imgs = document.querySelectorAll('.drop-zone img');
+            const promises = [];
+            imgs.forEach(img=>{
+                if(!img.complete){
+                    promises.push(new Promise(res=>{
+                        img.onload = res;
+                        img.onerror = res;
+                    }));
+                }
+            });
+            return Promise.all(promises);
+        }
+
+        async function printCanvas(){
+            const overlay = document.getElementById("print-overlay");
+            const printStage = document.getElementById("print-stage");
+            const container = document.getElementById("print-image-container");
+            const img = document.getElementById("print-image");
+            overlay.style.display = "flex";
+            try{
+                /* PREPARE CANVAS */
+                bakeFiltersToImages();
+                await waitImagesReady();
+                await new Promise(r=>setTimeout(r,200));
+                const radiusState = disablePreviewRadius();
+                applyExportRadius(radiusState);
+                const originalTransform = canvasContent.style.transform;
+                canvasContent.style.transform = "scale(1)";
+                const width  = currentTemplate.config.canvas.w;
+                const height = currentTemplate.config.canvas.h;
+                /* CREATE CLEAN CLONE */
+                printStage.innerHTML = "";
+                const clone = canvasContent.cloneNode(true);
+                clone.style.transform = "none";
+                clone.style.scale = "1";
+                clone.style.position = "relative";
+                clone.style.left = "0";
+                clone.style.top = "0";
+                printStage.appendChild(clone);
+                /* RENDER WITH HTML2CANVAS */
+                const canvas = await html2canvas(clone,{
+                    width,
+                    height,
+                    scale:1,
+                    useCORS:true,
+                    backgroundColor:"#ffffff",
+                    imageTimeout:0
+                });
+                canvasContent.style.transform = originalTransform;
+                restorePreviewRadius(radiusState);
+                restoreOriginalImages();
+                const imgData = canvas.toDataURL("image/jpeg",1);
+                /* PAPER CONFIG */
+                let paperW, paperH;
+                if(currentTemplate.paper){
+                    paperW = currentTemplate.paper.widthIn;
+                    paperH = currentTemplate.paper.heightIn;
+                }else{
+                    // fallback 300dpi
+                    paperW = width / 300;
+                    paperH = height / 300;
+                }
+                document.documentElement.style
+                    .setProperty("--print-w", paperW + "in");
+
+                document.documentElement.style
+                    .setProperty("--print-h", paperH + "in");
+                /* ORIENTATION AUTO */
+                document.body.classList.remove(
+                    "print-landscape",
+                    "print-portrait"
+                );
+                if(paperW > paperH){
+                    document.body.classList.add("print-landscape");
+                }else{
+                    document.body.classList.add("print-portrait");
+                }
+                /* SHOW PRINT IMAGE */
+                container.style.display = "flex";
+                document.body.classList.add("print-mode");
+				document.body.classList.add("print-scale-99");
+				document.body.classList.remove(
+					"print-polaroid",
+					"print-keychain",
+				);
+				if(currentTemplate.category){
+					document.body.classList.add("print-" + currentTemplate.category);
+				}
+                img.src = imgData;
+                // tunggu image decode
+                await img.decode().catch(()=>{});
+                await new Promise(r=>setTimeout(r,120));
+                document.body.style.height = "100vh";
+                window.scrollTo(0,0);
+                window.print();
+                /* CLEANUP */
+                setTimeout(()=>{
+                    container.style.display="none";
+                    printStage.innerHTML="";
+                    document.body.classList.remove(
+                        "print-mode",
+                        "print-landscape",
+                        "print-portrait",
+						"print-scale-99"
+                    );
+                },400);
+            }catch(err){
+                console.error("PRINT ERROR:", err);
+            }
+            overlay.style.display = "none";
+        }
+
+        renderTemplates();
+        lucide.createIcons();
+    </script>
+</body>
+</html>
