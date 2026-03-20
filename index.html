@@ -79,6 +79,10 @@
             position: relativ; flex-shrink: 0; transform-origin: center center; 
             display: none; 
         }
+		
+		.canvas-text { position: absolute; letter-spacing: 0px; transform: translateZ(0); text-rendering: geometricPrecision; word-break: break-word;
+			-webkit-font-smoothing: antialiased; }
+		.canvas-text:empty::before { content: attr(data-placeholder); color: rgba(255,255,255,0.3); pointer-events: none; }
 
         .drop-zone { 
             position: absolute; z-index: 10; display: flex; flex-direction: column; 
@@ -299,7 +303,7 @@
 
     <div class="app-container">
         <header class="header-section">
-            <h1 class="main-title">Snap Studio Photo Collage v2.0</h1>
+            <h1 class="main-title">Snap Studio Editor</h1>
             <p class="sub-title">made by sonystark</p>
         </header>
 
@@ -640,7 +644,11 @@
 				 { t: 1146, l: 660, w: 483, h: 323 }] } },
 			
 			/* EXCLUSIVE */	
-			{ id: 'e1', category: 'exclusive', name: 'Spotify 6in1', price: "IDR 25K", frameUrl: 'https://i.imgur.com/L75Tn21.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+			{ id: 'e1', category: 'exclusive', name: 'Spotify 6in1', price: "IDR 25K", frameUrl: 'https://i.imgur.com/DwTDlHS.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				hasText: true, textConfig: [{ 
+				id: 'title1', innerText: 'Your Song Title', textAlign: "left", maxLength: 40,
+				fontFamily: "Montserrat", fontSize: 37, fontWeight: 700, color: '#ffffff', letterSpacing: "1.5px",
+				top: 1473, left: 109 }], 
 				config: { canvas: { w: 1200, h: 1800 }, zones: 
 				[{ t: 118, l: 59, w: 512, h: 405 }, 
 				 { t: 118, l: 630, w: 512, h: 405 }, 
@@ -648,7 +656,14 @@
 				 { t: 581, l: 630, w: 512, h: 405 }, 
 				 { t: 1045, l: 59, w: 512, h: 405 }, 
 				 { t: 1045, l: 630, w: 512, h: 405 }] } },
-            { id: 'e2', category: 'exclusive', name: 'Spotify Strip x3', price: "IDR 25K", frameUrl: 'https://i.imgur.com/2vIxbKV.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+            { id: 'e2', category: 'exclusive', name: 'Spotify Strip x3', price: "IDR 25K", frameUrl: 'https://i.imgur.com/Itxcwti.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				hasText: true, textConfig: [{ 
+				id: 'title1', innerText: 'Your Song Title', textAlign: "left", maxLength: 20,
+				fontFamily: "Montserrat", fontSize: 31, fontWeight: 700, color: '#ffffff', letterSpacing: "1.5px",
+				top: 1510, left: 57 },{
+				id: 'title2', innerText: 'Your Song Title', textAlign: "left", maxLength: 20,
+				fontFamily: "Montserrat", fontSize: 31, fontWeight: 700, color: '#ffffff', letterSpacing: "1.5px",
+				top: 1510, left: 657 }], 
 				config: { canvas: { w: 1200, h: 1800 }, zones: 
 				[{ t: 106, l: 61, w: 478, h: 440 }, 
 				 { t: 106, l: 661, w: 478, h: 440 }, 
@@ -656,13 +671,27 @@
 				 { t: 581, l: 661, w: 478, h: 423 }, 
 				 { t: 1039, l: 61, w: 478, h: 440 }, 
 				 { t: 1039, l: 661, w: 478, h: 440 }] } },
-			{ id: 'e3', category: 'exclusive', name: 'Spotify Strip x2', price: "IDR 25K", frameUrl: 'https://i.imgur.com/766Ztk8.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+			{ id: 'e3', category: 'exclusive', name: 'Spotify Strip x2', price: "IDR 25K", frameUrl: 'https://i.imgur.com/7RFr84P.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				hasText: true, textConfig: [{ 
+				id: 'title1', innerText: 'Your Song Title', textAlign: "left", maxLength: 20,
+				fontFamily: "Montserrat", fontSize: 31, fontWeight: 700, color: '#ffffff', letterSpacing: "1.5px",
+				top: 1510, left: 57 },{
+				id: 'title2', innerText: 'Your Song Title', textAlign: "left", maxLength: 20,
+				fontFamily: "Montserrat", fontSize: 31, fontWeight: 700, color: '#ffffff', letterSpacing: "1.5px",
+				top: 1510, left: 657 }], 
 				config: { canvas: { w: 1200, h: 1800 }, zones: 
 				[{ t: 106, l: 61, w: 478, h: 661 }, 
 				 { t: 106, l: 661, w: 478, h: 661 },  
 				 { t: 818, l: 61, w: 478, h: 661 }, 
 				 { t: 818, l: 661, w: 478, h: 661 }] } },
-			{ id: 'e4', category: 'exclusive', name: 'Spotify Strip x4', price: "IDR 25K", frameUrl: 'https://i.imgur.com/46bmRqX.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+			{ id: 'e4', category: 'exclusive', name: 'Spotify Strip x4', price: "IDR 25K", frameUrl: 'https://i.imgur.com/vmvAXwB.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				hasText: true, textConfig: [{ 
+				id: 'title1', innerText: 'Your Song Title', textAlign: "left", maxLength: 20,
+				fontFamily: "Montserrat", fontSize: 30, fontWeight: 700, color: '#ffffff', letterSpacing: "1.5px",
+				top: 1502, left: 57 },{
+				id: 'title2', innerText: 'Your Song Title', textAlign: "left", maxLength: 20,
+				fontFamily: "Montserrat", fontSize: 30, fontWeight: 700, color: '#ffffff', letterSpacing: "1.5px",
+				top: 1502, left: 657 }], 
 				config: { canvas: { w: 1200, h: 1800 }, zones: 
 				[{ t: 89, l: 59, w: 483, h: 323 }, 
 				 { t: 89, l: 660, w: 483, h: 323 }, 
@@ -1106,9 +1135,59 @@
             fImg.crossOrigin = "anonymous"; fImg.src = tpl.frameUrl; fImg.className = 'frame-layer';
             canvasContent.appendChild(fImg);
             
+			renderCanvasText(tpl);
+			
             lucide.createIcons();
             resizeEditor();
         }
+		
+		function renderCanvasText(tpl) {
+			if (!tpl.textConfig) return;
+
+			tpl.textConfig.forEach(cfg => {
+				const textBox = document.createElement("div");
+
+				textBox.contentEditable = true;
+				textBox.className = "canvas-text";
+				textBox.style.display = "flex";
+				textBox.style.overflow = "visible";
+				textBox.style.alignItems = "center"; // atau flex-start
+				textBox.style.justifyContent = "flex-start"; // kalau center
+				textBox.style.paddingLeft = "5px";
+				textBox.style.paddingBottom = "20px";
+				textBox.innerText = cfg.innerText;
+				textBox.setAttribute("data-placeholder", cfg.placeholder);
+				Object.assign(textBox.style, {
+					position: "absolute",
+					top: cfg.top + "px",
+					left: cfg.left + "px",
+					fontWeight: cfg.fontWeight,
+					fontFamily: `${cfg.fontFamily}, sans-serif`,
+					fontSize: (cfg.fontSize) + "px",
+					textAlign: cfg.textAlign || "left",
+					letterSpacing: cfg.letterSpacing || "0px",
+					color: cfg.color,
+					outline: "rgba(0,0,0,0)",
+					cursor: "text",
+					whiteSpace: "pre-wrap",
+					overflow: "hidden",
+					zIndex: "35",
+					pointerEvents: "auto",
+					background: "rgba(0,0,0,0)"
+        });
+
+				// MAX LENGTH (dynamic)
+				textBox.addEventListener("input", () => {
+					const max = cfg.maxLength || 40;
+					if (textBox.innerText.length > max) {
+						textBox.innerText = textBox.innerText.substring(0, max);
+						placeCaretAtEnd(textBox);
+					}
+				});
+
+				canvasContent.appendChild(textBox);
+			});
+		}
 
         function getCanvasScale() {
             if (!canvasContent || !currentTemplate) return 1;
@@ -1339,10 +1418,12 @@
                 clone.style.top = "0";
                 clone.style.pointerEvents = "none";
                 clone.style.zIndex = "-1";
+				clone.querySelectorAll('.canvas-text').forEach(el => {el.style.transform = "translateY(-17px)";});
                 document.body.appendChild(clone);
                 const width  = currentTemplate.config.canvas.w;
                 const height = currentTemplate.config.canvas.h;
                 document.body.classList.add("export-mode");
+				await document.fonts.ready;
                 /* RENDER CLONE ONLY */
                 const canvas = await html2canvas(clone,{
                     width: width,
@@ -1412,7 +1493,9 @@
                 clone.style.position = "relative";
                 clone.style.left = "0";
                 clone.style.top = "0";
+				clone.querySelectorAll('.canvas-text').forEach(el => {el.style.transform = "translateY(-17px)";});
                 printStage.appendChild(clone);
+				await document.fonts.ready;
                 /* RENDER WITH HTML2CANVAS */
                 const canvas = await html2canvas(clone,{
                     width,
