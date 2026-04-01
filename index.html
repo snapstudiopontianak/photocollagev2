@@ -944,6 +944,33 @@
 				 { t: 590, l: 637, w: 524, h: 408 }, 
 				 { t: 1018, l: 38, w: 524, h: 408 }, 
 				 { t: 1018, l: 637, w: 524, h: 408 }] } },
+			{ id: 'e35', category: 'exclusive', name: 'Apple Music', price: "IDR 25K", frameUrl: 'https://i.imgur.com/S0GQTbw.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
+				hasText: true, textConfig: [{
+				id: 'date1', dynamic: "date", format: "long", maxLength: 23, width: 800, textAlign: "center",
+				fontFamily: "Inter", fontSize: 32, fontWeight: 500, color: '#ffffff', letterSpacing: "0px",
+				top: 32, left: -100, printAdjustY: -15 },{ 
+				id: 'time1', dynamic: "time", format: "24h", maxLength: 5, width: 800, textAlign: "center",
+				fontFamily: "Inter", fontSize: 145, fontWeight: 600, color: '#ffffff', letterSpacing: "0px",
+				top: 92, left: -100, printAdjustY: -57 },{
+				id: 'title1', textContent: 'Your Song Title', textAlign: "center", maxLength: 25,
+				fontFamily: "Inter", fontSize: 25, fontWeight: 800, color: '#181818', letterSpacing: "0px", width: 400,
+				top: 1600, left: 98, printAdjustY: -13 },{
+				id: 'date2', dynamic: "date", format: "long", maxLength: 23, width: 800, textAlign: "center",
+				fontFamily: "Inter", fontSize: 32, fontWeight: 500, color: '#ffffff', letterSpacing: "0px",
+				top: 32, left: 500, printAdjustY: -15 },{
+				id: 'time2', dynamic: "time", format: "24h", maxLength: 5, width: 800, textAlign: "center",
+				fontFamily: "Inter", fontSize: 145, fontWeight: 600, color: '#ffffff', letterSpacing: "0px",
+				top: 92, left: 500, printAdjustY: -57 },{
+				id: 'title1', textContent: 'Your Song Title', textAlign: "center", maxLength: 25,
+				fontFamily: "Inter", fontSize: 25, fontWeight: 800, color: '#181818', letterSpacing: "0px", width: 400,
+				top: 1600, left: 700, printAdjustY: -13 }], 
+				config: { canvas: { w: 1200, h: 1800 }, zones: 
+				[{ t: 224, l: 41, w: 519, h: 425 }, 
+				 { t: 224, l: 641, w: 519, h: 425 }, 
+				 { t: 669, l: 41, w: 519, h: 425 }, 
+				 { t: 669, l: 641, w: 519, h: 425 }, 
+				 { t: 1114, l: 41, w: 519, h: 425 }, 
+				 { t: 1114, l: 641, w: 519, h: 425 }] } },
 				 
 			/* LARGE */	 
             { id: 'l1', category: 'large', name: 'Newspaper', price: "IDR 25K", frameUrl: 'https://i.imgur.com/cEU9xw0.png', paper: { size:'A4', widthIn:8.27, heightIn:11.69 }, 
@@ -1199,6 +1226,7 @@
 			tpl.textConfig.forEach(cfg => {
 				const textBox = document.createElement("div");
 				const baselineFix = Math.round(cfg.fontSize * 0.22);
+				textBox.dataset.id = cfg.id;
 				textBox.contentEditable = true;
 				textBox.className = "canvas-text";
 				textBox.style.display = "inline-block";
@@ -1493,11 +1521,17 @@
                 /* CLONE CANVAS (IMPORTANT) */
                 const clone = canvasContent.cloneNode(true);
 				function applyPrintAdjust(clone, template){
-					if(!template.printAdjust) return;
-					const offsetY = template.printAdjust.textTranslateY || 0;
-					const offsetX = template.printAdjust.textTranslateX || 0;
-					const scale   = template.printAdjust.scale || 1;
-					clone.querySelectorAll('.canvas-text').forEach(el=>{el.style.transform =`translate(${offsetX}px, ${offsetY}px) scale(${scale})`;});}
+					if(!template.textConfig) return;
+					clone.querySelectorAll('.canvas-text').forEach(el=>{
+						const id = el.dataset.id;
+						const cfg = template.textConfig.find(t => t.id === id);
+						if(!cfg) return;
+						const offsetY = cfg.printAdjustY || template.printAdjust?.textTranslateY || 0;
+						const offsetX = cfg.printAdjustX || template.printAdjust?.textTranslateX || 0;
+						const scale   = cfg.printScale || template.printAdjust?.scale || 1;
+						el.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+					});
+				}
                 clone.style.transform = "none";
                 clone.style.position = "fixed";
                 clone.style.left = "-99999px";
@@ -1575,11 +1609,17 @@
                 printStage.innerHTML = "";
                 const clone = canvasContent.cloneNode(true);
 				function applyPrintAdjust(clone, template){
-					if(!template.printAdjust) return;
-					const offsetY = template.printAdjust.textTranslateY || 0;
-					const offsetX = template.printAdjust.textTranslateX || 0;
-					const scale   = template.printAdjust.scale || 1;
-					clone.querySelectorAll('.canvas-text').forEach(el=>{el.style.transform =`translate(${offsetX}px, ${offsetY}px) scale(${scale})`;});}
+					if(!template.textConfig) return;
+					clone.querySelectorAll('.canvas-text').forEach(el=>{
+						const id = el.dataset.id;
+						const cfg = template.textConfig.find(t => t.id === id);
+						if(!cfg) return;
+						const offsetY = cfg.printAdjustY || template.printAdjust?.textTranslateY || 0;
+						const offsetX = cfg.printAdjustX || template.printAdjust?.textTranslateX || 0;
+						const scale   = cfg.printScale || template.printAdjust?.scale || 1;
+						el.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+					});
+				}
                 clone.style.transform = "none";
                 clone.style.scale = "1";
                 clone.style.position = "relative";
