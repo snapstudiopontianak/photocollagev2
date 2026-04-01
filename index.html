@@ -1285,8 +1285,15 @@
 			}
 			return `${hours}:${minutes}`;
 		}
-		function getCurrentDate(format = "short") {
+		function getCurrentDate(format = "long") {
 			const now = new Date();
+			if (format === "long") {
+				return now.toLocaleDateString('en-US', {
+					weekday: 'long',
+					month: 'long',
+					day: 'numeric'
+				});
+			}
 			if (format === "short") {
 				return now.toLocaleDateString('en-US', {
 					month: 'short',
