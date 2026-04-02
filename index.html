@@ -500,6 +500,26 @@
 			{ id: 'p8', category: 'polaroid', name: 'Ramadan', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/acF0VCm.png', templateMode: "native", align: "left-center", 
 				config: { canvas: { w: 638, h: 1016 }, zones: 
 				[{ t: 113, l: 66, w: 507, h: 741 }] } },
+			{ id: 'p9', category: 'polaroid', name: 'Spotify', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/vIUbtPc.png', templateMode: "native", align: "left-center", 
+				hasText: true, textConfig: [{ 
+				id: 'title', textContent: 'Your Song Title', textAlign: "left", maxLength: 26,
+				fontFamily: "Montserrat", fontSize: 26, fontWeight: 700, color: '#ffffff', letterSpacing: "1px", width: 420,
+				top: 793, left: 60 }], printAdjust: { textTranslateY: -12 }, 
+				config: { canvas: { w: 640, h: 1018 }, zones: 
+				[{ t: 83, l: 52, w: 537, h: 680 }] } },
+			{ id: '10', category: 'polaroid', name: 'iMusic', price: "IDR 15K x2", frameUrl: 'https://i.imgur.com/f3JRyzq.png', templateMode: "native", align: "left-center", 
+				hasText: true, textConfig: [{
+				id: 'date1', dynamic: "date", format: "long", maxLength: 23, width: 800, textAlign: "center",
+				fontFamily: "Inter", fontSize: 32, fontWeight: 600, color: "#ffffff", letterSpacing: "-1px",
+				top: 31, left: -80, printAdjustY: -15 },{ 
+				id: 'time1', dynamic: "time", format: "24h", maxLength: 5, width: 800, textAlign: "center",
+				fontFamily: "Inter", fontSize: 145, fontWeight: 600, color: "#ffffff", letterSpacing: "0px",
+				top: 91, left: -80, printAdjustY: -58 },{
+				id: 'title1', textContent: 'Your Song Title', textAlign: "center", maxLength: 30,
+				fontFamily: "Inter", fontSize: 21, fontWeight: 800, color: '#181818', letterSpacing: "0px", width: 400,
+				top: 845, left: 120, printAdjustY: -13 }], 
+				config: { canvas: { w: 640, h: 1018 }, zones: 
+				[{ t: 225, l: 71, w: 499, h: 567 }] } },
 			
 			/* PLAIN */	
 			{ id: 'p1', category: 'plain', name: '4in1 Black', price: "IDR 25K", frameUrl: 'https://i.imgur.com/Dv7ZVQu.png', paper: { size:'4R', widthIn:4, heightIn:6 }, 
